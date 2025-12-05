@@ -65,8 +65,8 @@
         
         /* 输入区域 */
         .input-section, .input-group {
-            padding: 12px 20px;
-            border-bottom: 1px solid #f1f3f5;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
         }
         
         /* 横向布局输入组 */
@@ -74,31 +74,25 @@
             display: flex;
             align-items: center;
             flex-wrap: wrap;
-            gap: 8px;
         }
         
         .input-group.horizontal .input-label, .input-section.horizontal .input-label {
             margin-bottom: 0;
+            margin-right: 8px;
             white-space: nowrap;
-            font-weight: 500;
         }
         
-        .input-group.horizontal .input-field, .input-section.horizontal .select-container {
+        .input-group.horizontal .input-field {
             flex: 1;
-            min-width: 150px;
-        }
-        
-        /* 商品售价输入组特殊样式 */
-        .price-input-group {
-            flex-wrap: nowrap;
-        }
-        
-        .price-input-group .input-field {
-            min-width: 80px;
         }
         
         .input-section.horizontal .select-container {
-            min-width: 150px;
+            flex: 1;
+            margin-right: 8px;
+        }
+        
+        .input-section.horizontal .select-container:last-child {
+            margin-right: 0;
         }
         
         /* 输入标签 */
@@ -265,41 +259,17 @@
         }
         
         .error-message {
-            color: #dc3545;
+            color: #ff4d4f;
             font-size: 12px;
-            font-weight: 500;
-            margin: 0 8px;
-            white-space: nowrap;
-            flex-shrink: 0;
+            margin-top: 5px;
         }
         
-
-        
-        .full-width {
-            width: auto;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        
-        .price-input-container .error-message {
-            margin: 0;
-            flex-shrink: 0;
-        }
-        
-        .input-group.horizontal .input-label {
-            white-space: nowrap;
-        }
-        
-        /* 调整所有标签的右边距，使它们向右移动并对齐 */
-        .input-group.horizontal .input-label,
-        .input-section.horizontal .input-label {
-            margin-right: 8px;
-        }
-        
+        /* 隐藏元素 */
         .hidden {
             display: none;
         }
         
+        /* 金额格式化 */
         .currency {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
@@ -485,7 +455,7 @@
     <!-- 计算器容器 -->
     <div class="calculator-container">
         <!-- 商品售价 -->
-        <div class="input-group horizontal price-input-group">
+        <div class="input-group horizontal">
             <label for="productPrice" class="input-label"><span class="required-mark">* </span>商品售价：</label>
             <input type="text" id="productPrice" class="input-field" placeholder="请输入价格">
             <div id="priceError" class="error-message"></div>
