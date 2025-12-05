@@ -8,6 +8,9 @@ class ProductCalculator {
         this.calculateBtn = document.getElementById('calculateBtn');
         this.priceError = document.getElementById('priceError');
         
+        // 预编译正则表达式，提高验证速度
+        this.priceRegex = /^\d+(\.\d{1,2})?$/;
+        
         // 结果显示元素
         this.downPayment = document.getElementById('downPayment');
         this.totalRent = document.getElementById('totalRent');
@@ -47,11 +50,22 @@ class ProductCalculator {
         // 计算按钮点击事件
         this.calculateBtn.addEventListener('click', () => this.calculate());
         
-        // 价格输入框实时验证（减少重复验证）
+        // 价格输入框实时验证（优化：减少重复调用，合并逻辑）
         this.productPriceInput.addEventListener('input', () => {
             const isValid = this.validatePrice();
             this.checkAdminTrigger();
-            this.checkInputComplete();
+            
+            // 直接检查输入是否完整，避免重复调用validatePrice
+            const isRatioSelected = this.downPaymentRatioSelect.value !== '';
+            const isPeriodSelected = this.leasePeriodSelect.value !== '';
+            this.calculateBtn.disabled = !(isValid && isRatioSelected && isPeriodSelected);
+            
+            // 当商品售价修改或重新输入时，隐藏已计算的结果
+            this.overviewSection.classList.add('hidden');
+            this.billSection.classList.add('hidden');
+            this.downPayment.textContent = '';
+            this.totalRent.textContent = '';
+            this.installmentList.innerHTML = '';
         });
         
         // 回车触发计算
@@ -106,7 +120,7 @@ class ProductCalculator {
         });
     }
     
-    // 验证价格输入（优化：预编译正则表达式，减少重复计算）
+    // 验证价格输入（优化：使用预编译正则表达式，减少重复计算）
     validatePrice() {
         // 检查是否是触发文本
         if (this.productPriceInput.value === '今天开心888') {
@@ -115,15 +129,13 @@ class ProductCalculator {
         }
         
         const price = this.productPriceInput.value.trim();
-        // 预编译正则表达式（移到构造函数更好，但这里保持代码逻辑清晰）
-        const regex = /^\d+(\.\d{1,2})?$/;
         
         if (!price) {
             this.priceError.textContent = '请输入商品售价';
             return false;
         }
         
-        if (!regex.test(price)) {
+        if (!this.priceRegex.test(price)) {
             this.priceError.textContent = '请输入有效的金额（最多两位小数）';
             return false;
         }
@@ -140,6 +152,7 @@ class ProductCalculator {
     
     // 检查输入是否完整，更新计算按钮状态
     checkInputComplete() {
+        // 直接使用validatePrice的结果，避免重复验证
         const isPriceValid = this.validatePrice();
         const isRatioSelected = this.downPaymentRatioSelect.value !== '';
         const isPeriodSelected = this.leasePeriodSelect.value !== '';
@@ -202,31 +215,30 @@ class ProductCalculator {
         }
     }
     
-    // 生成账单详情（优化：使用文档片段和字符串模板减少DOM操作）
+    // 生成账单详情（优化：进一步减少DOM操作和字符串拼接开销）
     generateBillDetails(monthlyPayment, leasePeriod) {
         // 预格式化金额
         const formattedAmount = this.formatCurrency(monthlyPayment);
         
-        // 使用字符串模板批量生成HTML
-        let billsHTML = '';
+        // 优化字符串拼接，使用数组join代替+=操作
+        const billsHTML = [];
         for (let i = 2; i <= leasePeriod; i++) {
-            billsHTML += `
-                <div class="bill-item">
-                    <span class="bill-label">第${i}期</span>
-                    <span class="bill-value currency">${formattedAmount}</span>
-                </div>
-            `;
+            billsHTML.push(
+                '<div class="bill-item">',
+                '    <span class="bill-label">第' + i + '期</span>',
+                '    <span class="bill-value currency">' + formattedAmount + '</span>',
+                '</div>'
+            );
         }
         
         // 一次性更新DOM
-        this.installmentList.innerHTML = billsHTML;
+        this.installmentList.innerHTML = billsHTML.join('');
     }
     
-    // 检查是否触发隐藏功能
+    // 检查是否触发隐藏功能（优化：减少不必要的操作）
     checkAdminTrigger() {
-        // 确保触发文本完整匹配
+        // 确保触发文本完整匹配，避免不必要的操作
         if (this.productPriceInput.value === '今天开心888') {
-            // 清除验证错误信息
             this.priceError.textContent = '';
             this.showAdminPanel();
         }
