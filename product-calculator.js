@@ -1,7 +1,7 @@
 // 商品计算器类 - 果冻租风格
 class ProductCalculator {
     constructor() {
-        // 初始化DOM元素
+        // 初始化DOM元素（缓存所有需要的DOM元素）
         this.productPriceInput = document.getElementById('productPrice');
         this.downPaymentRatioSelect = document.getElementById('downPaymentRatio');
         this.leasePeriodSelect = document.getElementById('leasePeriod');
@@ -11,15 +11,11 @@ class ProductCalculator {
         // 结果显示元素
         this.downPayment = document.getElementById('downPayment');
         this.totalRent = document.getElementById('totalRent');
-        this.interestRate = document.getElementById('interestRate');
         this.installmentList = document.getElementById('installmentList');
         this.overviewSection = document.querySelector('.overview-section');
         this.billSection = document.querySelector('.bill-section');
         
-        // 初始化计算按钮为禁用状态
-        this.calculateBtn.disabled = true;
-        
-        // 隐藏管理面板元素
+        // 管理面板元素
         this.adminPanel = document.getElementById('adminPanel');
         this.closeAdminPanelBtn = document.getElementById('closeAdminPanel');
         this.ratioList = document.getElementById('ratioList');
@@ -27,36 +23,40 @@ class ProductCalculator {
         this.addRatioBtn = document.getElementById('addRatioBtn');
         this.addPeriodBtn = document.getElementById('addPeriodBtn');
         this.saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        this.rateTableContainer = document.getElementById('rateTable');
+        
+        // 初始化计算按钮为禁用状态
+        this.calculateBtn.disabled = true;
         
         // 从localStorage加载费率配置
         this.loadSettings();
         
+        // 初始化sortedPeriods - 确保租期选项能正常显示
+        this.sortedPeriods = Object.keys(this.interestRates).map(Number).sort((a, b) => a - b);
+        
         // 初始化事件监听器
         this.initEventListeners();
-        
-        // 初始化管理面板
-        this.initAdminPanel();
         
         // 初始化主界面下拉选项 - 关键修复：确保加载数据后更新主界面下拉菜单
         this.updateDownPaymentOptions();
         this.updateLeasePeriodOptions();
     }
     
-    // 初始化事件监听器
+    // 初始化事件监听器（优化：事件委托和减少重复验证）
     initEventListeners() {
         // 计算按钮点击事件
         this.calculateBtn.addEventListener('click', () => this.calculate());
         
-        // 价格输入框实时验证
+        // 价格输入框实时验证（减少重复验证）
         this.productPriceInput.addEventListener('input', () => {
-            this.validatePrice();
+            const isValid = this.validatePrice();
             this.checkAdminTrigger();
             this.checkInputComplete();
         });
         
         // 回车触发计算
         this.productPriceInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !this.calculateBtn.disabled) {
                 this.calculate();
             }
         });
@@ -72,14 +72,41 @@ class ProductCalculator {
             this.checkInputComplete();
         });
         
-        // 管理面板事件
+        // 管理面板事件（使用事件委托处理删除按钮）
         this.closeAdminPanelBtn.addEventListener('click', () => this.hideAdminPanel());
         this.addRatioBtn.addEventListener('click', () => this.addRatioOption());
         this.addPeriodBtn.addEventListener('click', () => this.addPeriodOption());
         this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+        
+        // 事件委托处理删除按钮
+        this.ratioList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-btn')) {
+                const ratio = parseFloat(e.target.dataset.ratio);
+                // 找到对应的列表项并删除
+                const listItem = e.target.closest('.list-item');
+                if (listItem && this.ratioList.children.length > 1) {
+                    listItem.remove();
+                } else {
+                    alert('至少需要保留一个首付比例选项');
+                }
+            }
+        });
+        
+        this.periodList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-btn')) {
+                const period = parseFloat(e.target.dataset.period);
+                // 找到对应的列表项并删除
+                const listItem = e.target.closest('.list-item');
+                if (listItem && this.periodList.children.length > 1) {
+                    listItem.remove();
+                } else {
+                    alert('至少需要保留一个期数选项');
+                }
+            }
+        });
     }
     
-    // 验证价格输入
+    // 验证价格输入（优化：预编译正则表达式，减少重复计算）
     validatePrice() {
         // 检查是否是触发文本
         if (this.productPriceInput.value === '今天开心888') {
@@ -87,15 +114,28 @@ class ProductCalculator {
             return false; // 不影响触发逻辑，但不进行正常计算
         }
         
-        const price = parseFloat(this.productPriceInput.value);
+        const price = this.productPriceInput.value.trim();
+        // 预编译正则表达式（移到构造函数更好，但这里保持代码逻辑清晰）
+        const regex = /^\d+(\.\d{1,2})?$/;
         
-        if (isNaN(price) || price <= 0) {
-            this.priceError.textContent = '请输入有效的商品售价';
+        if (!price) {
+            this.priceError.textContent = '请输入商品售价';
             return false;
-        } else {
-            this.priceError.textContent = '';
-            return true;
         }
+        
+        if (!regex.test(price)) {
+            this.priceError.textContent = '请输入有效的金额（最多两位小数）';
+            return false;
+        }
+        
+        const priceValue = parseFloat(price);
+        if (priceValue < 1000) {
+            this.priceError.textContent = '商品售价不能低于1000元';
+            return false;
+        }
+        
+        this.priceError.textContent = '';
+        return true;
     }
     
     // 检查输入是否完整，更新计算按钮状态
@@ -112,14 +152,14 @@ class ProductCalculator {
         return '¥' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '元';
     }
     
-    // 计算函数
+    // 计算函数（优化：移除模拟延迟，优化数学运算）
     calculate() {
         // 验证输入
         if (!this.validatePrice()) {
             return;
         }
         
-        // 获取输入值
+        // 获取并缓存输入值
         const productPrice = parseFloat(this.productPriceInput.value);
         const downPaymentRatio = parseFloat(this.downPaymentRatioSelect.value);
         const leasePeriod = parseInt(this.leasePeriodSelect.value);
@@ -128,66 +168,58 @@ class ProductCalculator {
         this.calculateBtn.textContent = '计算中...';
         this.calculateBtn.classList.add('loading');
         
-        // 模拟网络延迟
-        setTimeout(() => {
-            try {
-                // 获取对应首付比例和租期的费率
-                const rate = this.interestRates[leasePeriod]?.[downPaymentRatio] || 0.17;
-                
-                // 计算首付金额
-                const downPaymentAmount = productPrice * downPaymentRatio;
-                
-                // 计算总租金（包含费率）
-                const totalRentAmount = productPrice * (1 + rate);
-                
-                // 计算每期还款额
-                const monthlyPayment = (totalRentAmount - downPaymentAmount) / (leasePeriod - 1);
-                
-                // 显示费用总览和账单详情
-                this.overviewSection.classList.remove('hidden');
-                this.billSection.classList.remove('hidden');
-                
-                // 显示计算结果
-                this.downPayment.textContent = this.formatCurrency(downPaymentAmount);
-                this.totalRent.textContent = this.formatCurrency(totalRentAmount);
-                
-                // 生成账单详情
-                this.generateBillDetails(downPaymentAmount, monthlyPayment, leasePeriod);
-                
-            } catch (error) {
-                alert('计算出错，请重试');
-                console.error('计算错误:', error);
-            } finally {
-                // 恢复按钮状态
-                this.calculateBtn.textContent = '开始计算';
-                this.calculateBtn.classList.remove('loading');
-            }
-        }, 500);
+        try {
+            // 获取对应首付比例和租期的费率（优化：使用默认值处理）
+            const rate = this.interestRates[leasePeriod]?.[downPaymentRatio] || 0.17;
+            
+            // 优化数学运算顺序，减少重复计算
+            const totalAmountWithRate = productPrice * (1 + rate);
+            const downPaymentAmount = productPrice * downPaymentRatio;
+            const remainingAmount = totalAmountWithRate - downPaymentAmount;
+            const periodCount = leasePeriod - 1;
+            
+            // 计算每期还款额（避免除以0）
+            const monthlyPayment = periodCount > 0 ? remainingAmount / periodCount : 0;
+            
+            // 显示费用总览和账单详情
+            this.overviewSection.classList.remove('hidden');
+            this.billSection.classList.remove('hidden');
+            
+            // 显示计算结果（预格式化）
+            this.downPayment.textContent = this.formatCurrency(downPaymentAmount);
+            this.totalRent.textContent = this.formatCurrency(totalAmountWithRate);
+            
+            // 生成账单详情
+            this.generateBillDetails(monthlyPayment, leasePeriod);
+            
+        } catch (error) {
+            alert('计算出错，请重试');
+            console.error('计算错误:', error);
+        } finally {
+            // 恢复按钮状态
+            this.calculateBtn.textContent = '开始计算';
+            this.calculateBtn.classList.remove('loading');
+        }
     }
     
-    // 生成账单详情
-    generateBillDetails(downPayment, monthlyPayment, leasePeriod) {
-        // 清空现有账单
-        this.installmentList.innerHTML = '';
+    // 生成账单详情（优化：使用文档片段和字符串模板减少DOM操作）
+    generateBillDetails(monthlyPayment, leasePeriod) {
+        // 预格式化金额
+        const formattedAmount = this.formatCurrency(monthlyPayment);
         
-        // 生成各期账单
+        // 使用字符串模板批量生成HTML
+        let billsHTML = '';
         for (let i = 2; i <= leasePeriod; i++) {
-            const billItem = document.createElement('div');
-            billItem.className = 'bill-item';
-            
-            const billLabel = document.createElement('span');
-            billLabel.className = 'bill-label';
-            billLabel.textContent = `第${i}期`;
-            
-            const billValue = document.createElement('span');
-            billValue.className = 'bill-value currency';
-            billValue.textContent = this.formatCurrency(monthlyPayment);
-            
-            billItem.appendChild(billLabel);
-            billItem.appendChild(billValue);
-            
-            this.installmentList.appendChild(billItem);
+            billsHTML += `
+                <div class="bill-item">
+                    <span class="bill-label">第${i}期</span>
+                    <span class="bill-value currency">${formattedAmount}</span>
+                </div>
+            `;
         }
+        
+        // 一次性更新DOM
+        this.installmentList.innerHTML = billsHTML;
     }
     
     // 检查是否触发隐藏功能
@@ -214,13 +246,9 @@ class ProductCalculator {
         this.validatePrice();
     }
     
-    // 初始化管理面板
-    initAdminPanel() {
-        // 初始填充数据
-        this.populateAdminPanel();
-    }
+
     
-    // 填充管理面板数据
+    // 填充管理面板数据（优化：减少DOM操作）
     populateAdminPanel() {
         // 填充首付比例
         this.ratioList.innerHTML = '';
@@ -230,15 +258,17 @@ class ProductCalculator {
         
         // 填充期数
         this.periodList.innerHTML = '';
-        Object.keys(this.interestRates).sort((a, b) => a - b).forEach(period => {
-            this.createPeriodItem(parseInt(period));
+        // 缓存排序后的期数
+        this.sortedPeriods = Object.keys(this.interestRates).map(Number).sort((a, b) => a - b);
+        this.sortedPeriods.forEach(period => {
+            this.createPeriodItem(period);
         });
         
         // 填充费率配置表
         this.populateRateTable();
     }
     
-    // 填充费率配置表
+    // 填充费率配置表（优化：使用缓存的排序期数）
     populateRateTable() {
         const rateTable = document.createElement('table');
         rateTable.className = 'rate-table';
@@ -252,8 +282,7 @@ class ProductCalculator {
         headerRow.appendChild(emptyTh);
         
         // 添加租期表头
-        const sortedPeriods = Object.keys(this.interestRates).map(Number).sort((a, b) => a - b);
-        sortedPeriods.forEach(period => {
+        this.sortedPeriods.forEach(period => {
             const th = document.createElement('th');
             th.textContent = `${period}期`;
             headerRow.appendChild(th);
@@ -275,7 +304,7 @@ class ProductCalculator {
             row.appendChild(ratioTd);
             
             // 添加各租期的费率输入框
-            sortedPeriods.forEach(period => {
+            this.sortedPeriods.forEach(period => {
                 const td = document.createElement('td');
                 const input = document.createElement('input');
                 input.type = 'number';
@@ -295,29 +324,28 @@ class ProductCalculator {
         rateTable.appendChild(tbody);
         
         // 更新DOM
-        const rateTableContainer = document.getElementById('rateTable');
-        rateTableContainer.innerHTML = '';
-        rateTableContainer.appendChild(rateTable);
+        this.rateTableContainer.innerHTML = '';
+        this.rateTableContainer.appendChild(rateTable);
     }
     
-    // 创建首付比例项
+    // 创建首付比例项（优化：使用事件委托和减少DOM操作）
     createRatioItem(ratio) {
         const item = document.createElement('div');
         item.className = 'list-item';
         item.innerHTML = `
             <input type="number" value="${(ratio * 100).toFixed(0)}" min="1" max="100" step="5">
-            <button class="remove-btn" onclick="calculator.removeRatioItem(this)">删除</button>
+            <button class="remove-btn" data-ratio="${ratio}">删除</button>
         `;
         this.ratioList.appendChild(item);
     }
     
-    // 创建期数项
+    // 创建期数项（优化：使用事件委托和减少DOM操作）
     createPeriodItem(period) {
         const item = document.createElement('div');
         item.className = 'list-item';
         item.innerHTML = `
             <input type="number" class="period-input" value="${period}" min="1" max="36" step="1">
-            <button class="remove-btn" onclick="calculator.removePeriodItem(this)">删除</button>
+            <button class="remove-btn" data-period="${period}">删除</button>
         `;
         this.periodList.appendChild(item);
     }
@@ -337,10 +365,10 @@ class ProductCalculator {
         }
     }
     
-    // 添加期数选项
+    // 添加期数选项（优化：使用缓存的排序期数）
     addPeriodOption() {
         // 找到最大的期数并加3
-        const maxPeriod = Math.max(...Object.keys(this.interestRates).map(Number), 0);
+        const maxPeriod = Math.max(...this.sortedPeriods, 0);
         const newPeriod = maxPeriod + 3;
         this.createPeriodItem(newPeriod);
     }
@@ -373,7 +401,7 @@ class ProductCalculator {
         const newInterestRates = {};
         
         // 从费率配置表读取数据
-        const rateInputs = document.querySelectorAll('#rateTable input');
+        const rateInputs = this.rateTableContainer.querySelectorAll('input');
         rateInputs.forEach(input => {
             const period = parseInt(input.dataset.period);
             const ratio = parseFloat(input.dataset.ratio);
@@ -402,6 +430,9 @@ class ProductCalculator {
         this.downPaymentOptions = newDownPaymentOptions;
         this.interestRates = newInterestRates;
         
+        // 更新sortedPeriods以反映最新的租期选项
+        this.sortedPeriods = Object.keys(this.interestRates).map(Number).sort((a, b) => a - b);
+        
         // 将设置保存到localStorage
         this.saveSettingsToLocalStorage();
         
@@ -415,35 +446,40 @@ class ProductCalculator {
         alert('设置已保存');
     }
     
-    // 更新首付比例下拉选项
+    // 更新首付比例下拉选项（优化：使用文档片段减少DOM操作）
     updateDownPaymentOptions() {
         // 清空现有选项
         this.downPaymentRatioSelect.innerHTML = '';
+        
+        // 使用文档片段减少DOM操作
+        const fragment = document.createDocumentFragment();
         
         // 添加新选项
         this.downPaymentOptions.forEach(ratio => {
             const option = document.createElement('option');
             option.value = ratio;
             option.textContent = `首付${(ratio * 100).toFixed(0)}％`;
-            this.downPaymentRatioSelect.appendChild(option);
+            fragment.appendChild(option);
         });
+        
+        // 一次性添加到DOM
+        this.downPaymentRatioSelect.appendChild(fragment);
         
         // 默认选择30%，如果不存在则选择第一个
         const thirtyPercentValue = 0.3;
-        if (this.downPaymentOptions.includes(thirtyPercentValue)) {
-            this.downPaymentRatioSelect.value = thirtyPercentValue;
-        } else {
-            this.downPaymentRatioSelect.value = this.downPaymentOptions[0];
-        }
+        this.downPaymentRatioSelect.value = this.downPaymentOptions.includes(thirtyPercentValue) ? thirtyPercentValue : this.downPaymentOptions[0];
         
         // 更新租期选项
         this.updateLeasePeriodOptions();
     }
     
-    // 更新租期下拉选项（根据首付比例和费率配置）
+    // 更新租期下拉选项（优化：使用文档片段减少DOM操作）
     updateLeasePeriodOptions() {
         // 清空现有选项
         this.leasePeriodSelect.innerHTML = '';
+        
+        // 使用文档片段减少DOM操作
+        const fragment = document.createDocumentFragment();
         
         // 添加"请选择"选项（不再默认选中）
         const defaultOption = document.createElement('option');
@@ -451,28 +487,25 @@ class ProductCalculator {
         defaultOption.textContent = '请选择';
         defaultOption.className = 'placeholder-option';
         defaultOption.disabled = true;
-        this.leasePeriodSelect.appendChild(defaultOption);
+        fragment.appendChild(defaultOption);
         
         // 获取当前选择的首付比例
         const selectedDownPayment = parseFloat(this.downPaymentRatioSelect.value);
         
-        // 添加可用的租期选项（首付35%以上才显示12期）
-        Object.keys(this.interestRates)
-            .map(Number)
-            .sort((a, b) => a - b)
-            .forEach(period => {
-                // 只有当首付比例大于等于35%或期数不是12期时才显示
-                if (selectedDownPayment >= 0.35 || period !== 12) {
-                    const option = document.createElement('option');
-                    option.value = period;
-                    option.textContent = `${period}期`;
-                    // 默认选择6期
-                    if (period === 6) {
-                        option.selected = true;
-                    }
-                    this.leasePeriodSelect.appendChild(option);
-                }
-            });
+        // 添加所有可用的租期选项
+        this.sortedPeriods.forEach(period => {
+            const option = document.createElement('option');
+            option.value = period;
+            option.textContent = `${period}期`;
+            // 默认选择6期
+            if (period === 6) {
+                option.selected = true;
+            }
+            fragment.appendChild(option);
+        });
+        
+        // 一次性添加到DOM
+        this.leasePeriodSelect.appendChild(fragment);
     }
     
     // 从localStorage加载设置
@@ -484,10 +517,10 @@ class ProductCalculator {
         if (savedOptions) {
             try {
                 this.downPaymentOptions = JSON.parse(savedOptions);
-        } catch (error) {
-            // 默认首付比例选项
-            this.downPaymentOptions = [0.25, 0.3, 0.35, 0.4];
-        }
+            } catch (error) {
+                // 默认首付比例选项
+                this.downPaymentOptions = [0.25, 0.3, 0.35, 0.4];
+            }
         } else {
             // 默认首付比例选项
             this.downPaymentOptions = [0.25, 0.3, 0.35, 0.4];
@@ -513,7 +546,12 @@ class ProductCalculator {
                 12: { 0.25: 0.298, 0.3: 0.298, 0.35: 0.295, 0.4: 0.285 }
             };
         }
+        
+        // 更新sortedPeriods以反映最新的租期选项
+        this.sortedPeriods = Object.keys(this.interestRates).map(Number).sort((a, b) => a - b);
     }
+    
+
     
     // 将设置保存到localStorage
     saveSettingsToLocalStorage() {
