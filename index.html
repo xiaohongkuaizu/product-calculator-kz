@@ -264,13 +264,14 @@
         .price-input-group {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
         }
         
         .price-input-container {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex: 1;
         }
         
         .price-input-container .error-message {
@@ -280,6 +281,12 @@
         
         .input-group.horizontal .input-label {
             white-space: nowrap;
+        }
+        
+        /* 调整所有标签的右边距，使它们向右移动并对齐 */
+        .input-group.horizontal .input-label,
+        .input-section.horizontal .input-label {
+            margin-right: 8px;
         }
         
         .hidden {
