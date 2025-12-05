@@ -504,16 +504,21 @@ class ProductCalculator {
         // 获取当前选择的首付比例
         const selectedDownPayment = parseFloat(this.downPaymentRatioSelect.value);
         
-        // 添加所有可用的租期选项
+        // 根据首付比例过滤租期选项
+        // 只有首付比例大于或等于35%时，才显示12期及以上的租期
         this.sortedPeriods.forEach(period => {
-            const option = document.createElement('option');
-            option.value = period;
-            option.textContent = `${period}期`;
-            // 默认选择6期
-            if (period === 6) {
-                option.selected = true;
+            // 首付比例 >= 35% 时，显示所有租期选项
+            // 首付比例 < 35% 时，只显示6期选项
+            if (selectedDownPayment >= 0.35 || period <= 6) {
+                const option = document.createElement('option');
+                option.value = period;
+                option.textContent = `${period}期`;
+                // 默认选择6期
+                if (period === 6) {
+                    option.selected = true;
+                }
+                fragment.appendChild(option);
             }
-            fragment.appendChild(option);
         });
         
         // 一次性添加到DOM
