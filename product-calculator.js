@@ -129,7 +129,7 @@ class ProductCalculator {
         });
     }
     
-    // 处理价格输入的统一方法
+    // 处理价格输入的统一方法（优化：减少DOM操作，优化事件处理）
     handlePriceInput() {
         // 清除之前的定时器
         clearTimeout(this.priceValidationTimeout);
@@ -145,12 +145,15 @@ class ProductCalculator {
             this.calculateBtn.disabled = !(isValid && isRatioSelected && isPeriodSelected);
             
             // 当商品售价修改或重新输入时，隐藏已计算的结果
-            this.overviewSection.classList.add('hidden');
-            this.billSection.classList.add('hidden');
-            this.downPayment.textContent = '';
-            this.totalRent.textContent = '';
-            this.installmentList.innerHTML = '';
-        }, 100);
+            // 优化：只在结果可见时才进行隐藏操作
+            if (!this.overviewSection.classList.contains('hidden')) {
+                this.overviewSection.classList.add('hidden');
+                this.billSection.classList.add('hidden');
+                this.downPayment.textContent = '';
+                this.totalRent.textContent = '';
+                this.installmentList.innerHTML = '';
+            }
+        }, 80); // 进一步减少延迟时间
     }
     
     // 验证价格输入（优化：使用预编译正则表达式，减少重复计算）
@@ -189,10 +192,13 @@ class ProductCalculator {
         return true;
     }
     
-    // 检查输入是否完整，更新计算按钮状态
+    // 检查输入是否完整（优化：避免重复调用validatePrice）
     checkInputComplete() {
-        // 直接使用validatePrice的结果，避免重复验证
-        const isPriceValid = this.validatePrice();
+        // 只在非中文输入状态下进行完整验证
+        let isPriceValid = false;
+        if (!this.isComposing) {
+            isPriceValid = this.validatePrice() && this.productPriceInput.value.trim() !== '';
+        }
         const isRatioSelected = this.downPaymentRatioSelect.value !== '';
         const isPeriodSelected = this.leasePeriodSelect.value !== '';
         
@@ -224,22 +230,26 @@ class ProductCalculator {
             // 获取对应首付比例和租期的费率（优化：使用默认值处理）
             const rate = this.interestRates[leasePeriod]?.[downPaymentRatio] || 0.17;
             
-            // 优化数学运算顺序，减少重复计算
-            const totalAmountWithRate = productPrice * (1 + rate);
+            // 高度优化的数学运算，减少重复计算
             const downPaymentAmount = productPrice * downPaymentRatio;
+            const totalAmountWithRate = productPrice * (1 + rate);
             const remainingAmount = totalAmountWithRate - downPaymentAmount;
             const periodCount = leasePeriod - 1;
             
             // 计算每期还款额（避免除以0）
             const monthlyPayment = periodCount > 0 ? remainingAmount / periodCount : 0;
             
-            // 显示费用总览和账单详情
+            // 预格式化金额
+            const formattedDownPayment = this.formatCurrency(downPaymentAmount);
+            const formattedTotalRent = this.formatCurrency(totalAmountWithRate);
+            
+            // 一次性更新DOM，减少重排和重绘
             this.overviewSection.classList.remove('hidden');
             this.billSection.classList.remove('hidden');
             
-            // 显示计算结果（预格式化）
-            this.downPayment.textContent = this.formatCurrency(downPaymentAmount);
-            this.totalRent.textContent = this.formatCurrency(totalAmountWithRate);
+            // 显示计算结果
+            this.downPayment.textContent = formattedDownPayment;
+            this.totalRent.textContent = formattedTotalRent;
             
             // 生成账单详情
             this.generateBillDetails(monthlyPayment, leasePeriod);
@@ -482,8 +492,8 @@ class ProductCalculator {
         });
         
         // 处理新增的首付比例和期数
-        newDownPaymentOptions.forEach(ratio => {
-            newPeriods.forEach(period => {
+        for (const ratio of newDownPaymentOptions) {
+            for (const period of newPeriods) {
                 if (!newInterestRates[period]) {
                     newInterestRates[period] = {};
                 }
@@ -491,15 +501,15 @@ class ProductCalculator {
                     // 如果没有设置，使用默认值
                     newInterestRates[period][ratio] = 0.17;
                 }
-            });
-        });
+            }
+        }
         
         // 更新数据
         this.downPaymentOptions = newDownPaymentOptions;
         this.interestRates = newInterestRates;
         
         // 更新sortedPeriods以反映最新的租期选项
-        this.sortedPeriods = Object.keys(this.interestRates).map(Number).sort((a, b) => a - b);
+        this.sortedPeriods = newPeriods;
         
         // 将设置保存到localStorage
         this.saveSettingsToLocalStorage();
@@ -539,6 +549,9 @@ class ProductCalculator {
         
         // 更新租期选项
         this.updateLeasePeriodOptions();
+        
+        // 更新计算按钮状态
+        this.checkInputComplete();
     }
     
     // 更新租期下拉选项（优化：使用文档片段减少DOM操作）
@@ -559,13 +572,14 @@ class ProductCalculator {
         
         // 获取当前选择的首付比例
         const selectedDownPayment = parseFloat(this.downPaymentRatioSelect.value);
+        const isHighDownPayment = selectedDownPayment >= 0.35;
         
         // 根据首付比例过滤租期选项
         // 只有首付比例大于或等于35%时，才显示12期及以上的租期
         this.sortedPeriods.forEach(period => {
             // 首付比例 >= 35% 时，显示所有租期选项
             // 首付比例 < 35% 时，显示6期和9期选项
-            if (selectedDownPayment >= 0.35 || period <= 9) {
+            if (isHighDownPayment || period <= 9) {
                 const option = document.createElement('option');
                 option.value = period;
                 option.textContent = `${period}期`;
@@ -579,6 +593,9 @@ class ProductCalculator {
         
         // 一次性添加到DOM
         this.leasePeriodSelect.appendChild(fragment);
+        
+        // 更新计算按钮状态
+        this.checkInputComplete();
     }
     
     // 初始化默认设置
@@ -632,7 +649,7 @@ class ProductCalculator {
         
         // 更新sortedPeriods以反映最新的租期选项
         this.sortedPeriods = Object.keys(this.interestRates).map(Number).sort((a, b) => a - b);
-    },
+    }
     
     // 检测localStorage是否可用
     isLocalStorageAvailable() {

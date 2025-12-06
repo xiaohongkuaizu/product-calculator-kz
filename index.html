@@ -10,11 +10,11 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
         
         body {
-            background-color: #f5f5f5;
+            background-color: #f8f8f8;
             min-height: 100vh;
             font-size: 14px;
             color: #333;
@@ -23,11 +23,11 @@
         /* 顶部导航栏 */
         .top-nav {
             background-color: #fff;
-            padding: 12px 15px;
+            padding: 10px 12px;
             display: flex;
             align-items: center;
             position: relative;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e8e8e8;
         }
         
         .back-btn {
@@ -44,7 +44,7 @@
             left: 50%;
             transform: translateX(-50%);
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 500;
             color: #333;
         }
         
@@ -52,14 +52,15 @@
         .calculator-container {
             background-color: #fff;
             margin: 8px;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
         
         /* 输入区域 */
         .input-section, .input-group {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
         }
         
         /* 横向布局输入组 */
@@ -67,21 +68,23 @@
             display: flex;
             align-items: center;
             flex-wrap: wrap;
+            gap: 8px;
         }
         
         .input-group.horizontal .input-label, .input-section.horizontal .input-label {
             margin-bottom: 0;
-            margin-right: 8px;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         
         .input-group.horizontal .input-field {
             flex: 1;
+            min-width: 120px;
         }
         
         .input-section.horizontal .select-container {
             flex: 1;
-            margin-right: 8px;
+            min-width: 120px;
         }
         
         .input-section.horizontal .select-container:last-child {
@@ -91,9 +94,10 @@
         /* 输入标签 */
         .input-label {
             display: block;
-            font-size: 15px;
+            font-size: 12px;
+            font-weight: 600;
             color: #000;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         
         /* 必填项标记 */
@@ -104,18 +108,28 @@
         /* 输入框样式 */
         .input-field {
             width: 100%;
-            height: 40px;
+            height: 36px;
             padding: 0 10px;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
-            font-size: 15px;
+            font-size: 14px;
             background-color: #fff;
             box-sizing: border-box;
         }
         
         .input-field:focus {
             outline: none;
-            border-color: #1890ff;
+            border-color: #004dab;
+        }
+        
+        /* 占位符文本样式 */
+        .input-field::placeholder {
+            color: #999;
+        }
+        
+        /* 选择器的占位符样式 */
+        .select-field:invalid {
+            color: #999;
         }
         
         /* 选择器样式 */
@@ -126,20 +140,30 @@
         
         .select-field {
             width: 100%;
-            height: 40px;
+            height: 36px;
             padding: 0 30px 0 10px;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
-            font-size: 15px;
+            font-size: 14px;
             background-color: #fff;
             appearance: none;
             cursor: pointer;
             box-sizing: border-box;
         }
         
+        .select-field:focus {
+            outline: none;
+            border-color: #004dab;
+        }
+        
         /* 占位符选项样式 */
         .placeholder-option {
             color: #999;
+        }
+        
+        /* 下拉菜单选中项样式 */
+        option:checked {
+            background-color: #f0f0f0;
         }
         
         .select-container::after {
@@ -157,16 +181,16 @@
         
         /* 费用总览区域 */
         .overview-section {
-            padding: 12px 15px;
-            background-color: #f0f8ff;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 12px 16px;
+            background-color: #fafafa;
+            border-bottom: 1px solid #f0f0f0;
         }
         
         .overview-title {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         
         .overview-item {
@@ -182,27 +206,27 @@
         }
         
         .overview-value {
-            font-size: 15px;
-            font-weight: 500;
+            font-size: 13px;
+            font-weight: normal;
             color: #999;
         }
         
         /* 费率百分比特殊样式 */
         #interestRate {
             font-size: 12px;
-            color: #999;
+            color: #888;
         }
         
         /* 账单详情区域 */
         .bill-section {
-            padding: 12px 15px;
+            padding: 12px 16px;
         }
         
         .bill-title {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         
         .bill-item {
@@ -210,7 +234,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f5f5f5;
         }
         
         .bill-item:last-child {
@@ -223,9 +247,9 @@
         }
         
         .bill-value {
-            font-size: 15px;
-            font-weight: 500;
-            color: #333;
+            font-size: 13px;
+            font-weight: normal;
+            color: #666;
         }
         
         /* 计算按钮 */
@@ -233,14 +257,15 @@
             width: calc(100% - 16px);
             margin: 8px;
             padding: 14px;
-            background-color: #1890ff;
+            background-color: #004dab;
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0, 77, 171, 0.2);
         }
         
         /* 禁用状态的计算按钮 */
@@ -251,11 +276,11 @@
         }
         
         .calculate-btn:hover {
-            background-color: #40a9ff;
+            background-color: #005aae;
         }
         
         .calculate-btn:active {
-            background-color: #096dd9;
+            background-color: #003d82;
         }
         
         /* 加载状态 */
@@ -268,7 +293,8 @@
         .error-message {
             color: #ff4d4f;
             font-size: 12px;
-            margin-top: 5px;
+            margin-top: 4px;
+            line-height: 1.4;
         }
         
         /* 隐藏元素 */
@@ -367,7 +393,7 @@
         }
         
         .add-btn {
-            background-color: #1890ff;
+            background-color: #004dab;
             color: #fff;
             border: none;
             border-radius: 6px;
@@ -375,6 +401,15 @@
             cursor: pointer;
             width: 100%;
             font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .add-btn:hover {
+            background-color: #005aae;
+        }
+        
+        .add-btn:active {
+            background-color: #003d82;
         }
         
         .save-btn {
