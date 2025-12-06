@@ -36,7 +36,7 @@ class ProductCalculator {
         this.priceValidationTimeout = null;
         this.isComposing = false;
         
-        // 从localStorage加载费率配置
+        // 从localStorage加载费率配置（兼容模式）
         this.loadSettings();
         
         // 初始化租期排序数组 - 确保租期选项能正常显示
@@ -593,52 +593,89 @@ class ProductCalculator {
         };
     }
     
-    // 从localStorage加载设置
+    // 从localStorage加载设置（兼容微信浏览器）
     loadSettings() {
-        const savedRates = localStorage.getItem('interestRates');
-        const savedOptions = localStorage.getItem('downPaymentOptions');
-        
         // 初始化默认设置
         this.initializeDefaultSettings();
         
-        // 尝试从localStorage加载首付比例选项
-        if (savedOptions) {
-            try {
-                this.downPaymentOptions = JSON.parse(savedOptions);
-            } catch (error) {
-                // 加载失败时保持默认设置
-                console.warn('Failed to load down payment options from localStorage, using defaults.');
+        // 尝试从localStorage加载设置，添加兼容性处理
+        try {
+            // 检测localStorage是否可用
+            if (typeof localStorage !== 'undefined' && this.isLocalStorageAvailable()) {
+                const savedRates = localStorage.getItem('interestRates');
+                const savedOptions = localStorage.getItem('downPaymentOptions');
+                
+                // 尝试从localStorage加载首付比例选项
+                if (savedOptions) {
+                    try {
+                        this.downPaymentOptions = JSON.parse(savedOptions);
+                    } catch (error) {
+                        // 加载失败时保持默认设置
+                        console.warn('Failed to load down payment options from localStorage, using defaults.');
+                    }
+                }
+                
+                // 尝试从localStorage加载费率配置
+                if (savedRates) {
+                    try {
+                        this.interestRates = JSON.parse(savedRates);
+                    } catch (error) {
+                        // 加载失败时保持默认设置
+                        console.warn('Failed to load interest rates from localStorage, using defaults.');
+                    }
+                }
             }
-        }
-        
-        // 尝试从localStorage加载费率配置
-        if (savedRates) {
-            try {
-                this.interestRates = JSON.parse(savedRates);
-            } catch (error) {
-                // 加载失败时保持默认设置
-                console.warn('Failed to load interest rates from localStorage, using defaults.');
-            }
+        } catch (error) {
+            // localStorage不可用时使用默认设置
+            console.warn('localStorage not available, using default settings.');
         }
         
         // 更新sortedPeriods以反映最新的租期选项
         this.sortedPeriods = Object.keys(this.interestRates).map(Number).sort((a, b) => a - b);
+    },
+    
+    // 检测localStorage是否可用
+    isLocalStorageAvailable() {
+        try {
+            const testKey = '__test__';
+            localStorage.setItem(testKey, testKey);
+            localStorage.removeItem(testKey);
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
     
 
     
-    // 将设置保存到localStorage
+    // 将设置保存到localStorage（兼容微信浏览器）
     saveSettingsToLocalStorage() {
         try {
-            localStorage.setItem('interestRates', JSON.stringify(this.interestRates));
-            localStorage.setItem('downPaymentOptions', JSON.stringify(this.downPaymentOptions));
+            // 检测localStorage是否可用
+            if (typeof localStorage !== 'undefined' && this.isLocalStorageAvailable()) {
+                localStorage.setItem('interestRates', JSON.stringify(this.interestRates));
+                localStorage.setItem('downPaymentOptions', JSON.stringify(this.downPaymentOptions));
+            }
         } catch (error) {
             // 保存失败时不影响功能，继续使用当前内存中的设置
+            console.warn('Failed to save settings to localStorage.');
         }
     }
 }
 
-// 页面加载完成后初始化计算器
-document.addEventListener('DOMContentLoaded', () => {
+// 页面加载完成后初始化计算器（兼容微信浏览器）
+function initCalculator() {
     window.calculator = new ProductCalculator();
-});
+}
+
+// 使用多种方式确保页面加载完成后执行初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCalculator);
+} else {
+    initCalculator();
+}
+
+// 确保在微信浏览器中也能正常初始化
+if (typeof WeixinJSBridge !== 'undefined') {
+    WeixinJSBridge.on('page:loaded', initCalculator);
+}
