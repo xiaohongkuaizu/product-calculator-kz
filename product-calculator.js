@@ -76,31 +76,6 @@ class ProductCalculator {
                 this.handlePriceInput(e);
             }
         });
-    }
-    
-    // 处理价格输入的统一方法
-    handlePriceInput() {
-        // 清除之前的定时器
-        clearTimeout(this.priceValidationTimeout);
-        
-        // 添加延迟处理，减少延迟时间以提高响应速度
-        this.priceValidationTimeout = setTimeout(() => {
-            const isValid = this.validatePrice();
-            this.checkAdminTrigger();
-            
-            // 直接检查输入是否完整，避免重复调用validatePrice
-            const isRatioSelected = this.downPaymentRatioSelect.value !== '';
-            const isPeriodSelected = this.leasePeriodSelect.value !== '';
-            this.calculateBtn.disabled = !(isValid && isRatioSelected && isPeriodSelected);
-            
-            // 当商品售价修改或重新输入时，隐藏已计算的结果
-            this.overviewSection.classList.add('hidden');
-            this.billSection.classList.add('hidden');
-            this.downPayment.textContent = '';
-            this.totalRent.textContent = '';
-            this.installmentList.innerHTML = '';
-        }, 100);
-    }
         
         // 回车触发计算
         this.productPriceInput.addEventListener('keypress', (e) => {
@@ -152,6 +127,30 @@ class ProductCalculator {
                 }
             }
         });
+    }
+    
+    // 处理价格输入的统一方法
+    handlePriceInput() {
+        // 清除之前的定时器
+        clearTimeout(this.priceValidationTimeout);
+        
+        // 添加延迟处理，减少延迟时间以提高响应速度
+        this.priceValidationTimeout = setTimeout(() => {
+            const isValid = this.validatePrice();
+            this.checkAdminTrigger();
+            
+            // 直接检查输入是否完整，避免重复调用validatePrice
+            const isRatioSelected = this.downPaymentRatioSelect.value !== '';
+            const isPeriodSelected = this.leasePeriodSelect.value !== '';
+            this.calculateBtn.disabled = !(isValid && isRatioSelected && isPeriodSelected);
+            
+            // 当商品售价修改或重新输入时，隐藏已计算的结果
+            this.overviewSection.classList.add('hidden');
+            this.billSection.classList.add('hidden');
+            this.downPayment.textContent = '';
+            this.totalRent.textContent = '';
+            this.installmentList.innerHTML = '';
+        }, 100);
     }
     
     // 验证价格输入（优化：使用预编译正则表达式，减少重复计算）
