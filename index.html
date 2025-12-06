@@ -192,7 +192,7 @@
         }
         
         .overview-value, .bill-value {
-            font-size: 15px;
+            font-size: 14px; /* 调整为与标签一致的字体大小 */
             font-weight: normal; /* 移除加粗 */
             color: #6c757d; /* 调整为更暗的颜色 */
             flex: 1;
@@ -225,25 +225,19 @@
         }
         
         /* 计算按钮 */
-        /* 计算按钮 - 固定在屏幕底部 */
         .calculate-btn {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            margin: 0;
             padding: 16px;
             background: linear-gradient(135deg, #2c5282 0%, #2a4365 100%);
             color: #ffffff;
             border: none;
-            border-radius: 0;
+            border-radius: 8px;
             font-size: 17px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 9999; /* 固定在最上面图层 */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            margin-top: 20px;
+            width: 100%;
         }
         
         /* 禁用状态的计算按钮 */
