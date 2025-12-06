@@ -32,6 +32,10 @@ class ProductCalculator {
         // 初始化计算按钮为禁用状态
         this.calculateBtn.disabled = true;
         
+        // 中文输入法支持相关变量
+        this.priceValidationTimeout = null;
+        this.isComposing = false;
+        
         // 从localStorage加载费率配置
         this.loadSettings();
         
@@ -51,30 +55,52 @@ class ProductCalculator {
         // 计算按钮点击事件
         this.calculateBtn.addEventListener('click', () => this.calculate());
         
-        // 价格输入框实时验证（优化：添加延迟处理，避免影响中文输入法）
-        let priceValidationTimeout;
-        this.productPriceInput.addEventListener('input', () => {
-            // 清除之前的定时器
-            clearTimeout(priceValidationTimeout);
-            
-            // 添加延迟处理，避免影响中文输入法
-            priceValidationTimeout = setTimeout(() => {
-                const isValid = this.validatePrice();
-                this.checkAdminTrigger();
-                
-                // 直接检查输入是否完整，避免重复调用validatePrice
-                const isRatioSelected = this.downPaymentRatioSelect.value !== '';
-                const isPeriodSelected = this.leasePeriodSelect.value !== '';
-                this.calculateBtn.disabled = !(isValid && isRatioSelected && isPeriodSelected);
-                
-                // 当商品售价修改或重新输入时，隐藏已计算的结果
-                this.overviewSection.classList.add('hidden');
-                this.billSection.classList.add('hidden');
-                this.downPayment.textContent = '';
-                this.totalRent.textContent = '';
-                this.installmentList.innerHTML = '';
-            }, 300);
+        // 价格输入框实时验证（优化：添加中文输入法支持）
+        
+        // 监听中文输入法开始输入事件
+        this.productPriceInput.addEventListener('compositionstart', () => {
+            this.isComposing = true;
+            clearTimeout(this.priceValidationTimeout);
         });
+        
+        // 监听中文输入法结束输入事件
+        this.productPriceInput.addEventListener('compositionend', (e) => {
+            this.isComposing = false;
+            // 输入法完成后执行验证
+            this.handlePriceInput(e);
+        });
+        
+        // 普通输入事件处理
+        this.productPriceInput.addEventListener('input', (e) => {
+            if (!this.isComposing) {
+                this.handlePriceInput(e);
+            }
+        });
+    }
+    
+    // 处理价格输入的统一方法
+    handlePriceInput() {
+        // 清除之前的定时器
+        clearTimeout(this.priceValidationTimeout);
+        
+        // 添加延迟处理，减少延迟时间以提高响应速度
+        this.priceValidationTimeout = setTimeout(() => {
+            const isValid = this.validatePrice();
+            this.checkAdminTrigger();
+            
+            // 直接检查输入是否完整，避免重复调用validatePrice
+            const isRatioSelected = this.downPaymentRatioSelect.value !== '';
+            const isPeriodSelected = this.leasePeriodSelect.value !== '';
+            this.calculateBtn.disabled = !(isValid && isRatioSelected && isPeriodSelected);
+            
+            // 当商品售价修改或重新输入时，隐藏已计算的结果
+            this.overviewSection.classList.add('hidden');
+            this.billSection.classList.add('hidden');
+            this.downPayment.textContent = '';
+            this.totalRent.textContent = '';
+            this.installmentList.innerHTML = '';
+        }, 100);
+    }
         
         // 回车触发计算
         this.productPriceInput.addEventListener('keypress', (e) => {
@@ -136,6 +162,12 @@ class ProductCalculator {
             return false; // 不影响触发逻辑，但不进行正常计算
         }
         
+        // 如果正在进行中文输入，不显示错误提示
+        if (this.isComposing) {
+            this.priceError.textContent = '';
+            return false;
+        }
+        
         const price = this.productPriceInput.value.trim();
         
         if (!price) {
@@ -144,7 +176,7 @@ class ProductCalculator {
         }
         
         if (!this.priceRegex.test(price)) {
-            this.priceError.textContent = '请输入有效的金额（最多两位小数）';
+            this.priceError.textContent = '请输入有效的金额';
             return false;
         }
         
@@ -555,9 +587,9 @@ class ProductCalculator {
         // 保留50%首付选项
         this.downPaymentOptions = [0.25, 0.3, 0.35, 0.4, 0.5];
         this.interestRates = {
-            6: { 0.25: 0.255, 0.3: 0.235, 0.35: 0.23, 0.4: 0.22, 0.5: 0.17 },
-            9: { 0.25: 0.275, 0.3: 0.268, 0.35: 0.268, 0.4: 0.265, 0.5: 0.21 },
-            12: { 0.25: 0.298, 0.3: 0.298, 0.35: 0.295, 0.4: 0.285, 0.5: 0.268 }
+            6: { 0.25: 0.295, 0.3: 0.262, 0.35: 0.245, 0.4: 0.235, 0.5: 0.170 },
+            9: { 0.25: 0.325, 0.3: 0.286, 0.35: 0.272, 0.4: 0.256, 0.5: 0.210 },
+            12: { 0.25: 0.298, 0.3: 0.298, 0.35: 0.330, 0.4: 0.300, 0.5: 0.268 }
             // 移除24期选项
         };
     }
